@@ -39,7 +39,6 @@
 
         .day-cell { font-weight:700; font-size:1.1rem; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
         .checkbox-container { display:flex; justify-content:center; align-items:center; gap:8px; }
-        /* Input checkbox hidden, use span for visual */
         .checkbox-input { display:none; }
         .custom-checkbox {
             width:28px; height:28px; border:2px solid rgba(148,163,184,0.3); border-radius:8px; cursor:pointer; position:relative; transition:all 0.18s cubic-bezier(0.4,0,0.2,1); background: rgba(15,23,42,0.5); display:inline-block;
@@ -55,7 +54,7 @@
         }
 
         .progress-cell { font-weight:600; }
-        .progress-percent { font-weight:700; margin-top:8px; } /* colocado abaixo da barra */
+        .progress-percent { font-weight:700; margin-top:8px; }
         .progress-bar { width:120px; height:10px; background: rgba(15,23,42,0.8); border-radius:5px; margin:8px auto; overflow:hidden; border:1px solid rgba(148,163,184,0.2); }
         .progress-fill { height:100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); transition: width 0.5s cubic-bezier(0.4,0,0.2,1); border-radius:5px; }
 
@@ -68,21 +67,6 @@
         .motivational-message { text-align:center; padding:32px; background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08)); border:1px solid rgba(59,130,246,0.12); color:#f8fafc; font-size:1.15rem; font-weight:500; margin-top:32px; border-radius:20px; backdrop-filter: blur(20px); }
 
         .section-title { font-size:1.5rem; font-weight:700; margin-bottom:24px; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; text-align:center; }
-
-        @media (max-width: 1024px) {
-            .dashboard { grid-template-columns:1fr; gap:24px; }
-            .header h1 { font-size:2.5rem; }
-            .stats-grid { grid-template-columns:repeat(2,1fr); }
-        }
-        @media (max-width: 768px) {
-            .container { padding:16px; }
-            .header h1 { font-size:2rem; }
-            .stats-grid { grid-template-columns:1fr; }
-            .stats-section, .chart-section, .table-container { padding:24px; }
-            table { font-size:0.9rem; }
-            th, td { padding:12px 8px; }
-            .observations-input { min-width:150px; }
-        }
     </style>
 </head>
 <body>
@@ -151,15 +135,26 @@
     <script>
         let challengeData = [];
         let chart = null;
+        const STORAGE_KEY = "desafio21diasData";
 
-        for (let i = 1; i <= 21; i++) {
-            challengeData.push({
-                day: i,
-                exercise: false,
-                sugarFree: false,
-                observations: '',
-                progress: 0
-            });
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    challengeData = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Erro ao carregar localStorage:", e);
+                }
+            }
+            if (!challengeData.length) {
+                for (let i = 1; i <= 21; i++) {
+                    challengeData.push({ day: i, exercise: false, sugarFree: false, observations: '', progress: 0 });
+                }
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(challengeData));
         }
 
         function createTable() {
@@ -168,92 +163,58 @@
 
             challengeData.forEach((dayData, index) => {
                 const row = tableBody.insertRow();
-
-                // Dia
                 const dayCell = row.insertCell(0);
                 dayCell.className = 'day-cell';
                 dayCell.textContent = `Dia ${dayData.day}`;
 
-                // Exercício (apenas um checkbox)
                 const exerciseCell = row.insertCell(1);
                 const exerciseLabel = document.createElement('label');
                 exerciseLabel.className = 'checkbox-container';
                 const exerciseInput = document.createElement('input');
                 exerciseInput.type = 'checkbox';
                 exerciseInput.className = 'checkbox-input';
-                exerciseInput.id = `exercise-${index}`;
                 exerciseInput.checked = !!dayData.exercise;
                 const exerciseSpan = document.createElement('span');
                 exerciseSpan.className = 'custom-checkbox';
-                // clicking the visual span toggles the input
-                exerciseSpan.addEventListener('click', () => {
-                    exerciseInput.checked = !exerciseInput.checked;
-                    exerciseInput.dispatchEvent(new Event('change'));
-                });
-                exerciseLabel.appendChild(exerciseInput);
-                exerciseLabel.appendChild(exerciseSpan);
-                exerciseInput.onchange = (e) => {
-                    challengeData[index].exercise = e.target.checked;
-                    updateProgress(index);
-                    updateStats();
-                    updateChart();
-                    updateMotivationalMessage();
-                    createTable();
-                };
+                exerciseSpan.addEventListener('click', () => { exerciseInput.checked = !exerciseInput.checked; exerciseInput.dispatchEvent(new Event('change')); });
+                exerciseLabel.appendChild(exerciseInput); exerciseLabel.appendChild(exerciseSpan);
+                exerciseInput.onchange = (e) => { challengeData[index].exercise = e.target.checked; updateProgress(index); updateStats(); updateChart(); updateMotivationalMessage(); createTable(); saveToLocalStorage(); };
                 exerciseCell.appendChild(exerciseLabel);
 
-                // Sem Açúcar (apenas um checkbox)
                 const sugarCell = row.insertCell(2);
                 const sugarLabel = document.createElement('label');
                 sugarLabel.className = 'checkbox-container';
                 const sugarInput = document.createElement('input');
                 sugarInput.type = 'checkbox';
                 sugarInput.className = 'checkbox-input';
-                sugarInput.id = `sugar-${index}`;
                 sugarInput.checked = !!dayData.sugarFree;
                 const sugarSpan = document.createElement('span');
                 sugarSpan.className = 'custom-checkbox';
-                sugarSpan.addEventListener('click', () => {
-                    sugarInput.checked = !sugarInput.checked;
-                    sugarInput.dispatchEvent(new Event('change'));
-                });
-                sugarLabel.appendChild(sugarInput);
-                sugarLabel.appendChild(sugarSpan);
-                sugarInput.onchange = (e) => {
-                    challengeData[index].sugarFree = e.target.checked;
-                    updateProgress(index);
-                    updateStats();
-                    updateChart();
-                    updateMotivationalMessage();
-                    createTable();
-                };
+                sugarSpan.addEventListener('click', () => { sugarInput.checked = !sugarInput.checked; sugarInput.dispatchEvent(new Event('change')); });
+                sugarLabel.appendChild(sugarInput); sugarLabel.appendChild(sugarSpan);
+                sugarInput.onchange = (e) => { challengeData[index].sugarFree = e.target.checked; updateProgress(index); updateStats(); updateChart(); updateMotivationalMessage(); createTable(); saveToLocalStorage(); };
                 sugarCell.appendChild(sugarLabel);
 
-                // Observações (coluna correta)
                 const observationsCell = row.insertCell(3);
                 const observationsInput = document.createElement('input');
                 observationsInput.type = 'text';
                 observationsInput.className = 'observations-input';
                 observationsInput.value = dayData.observations || '';
                 observationsInput.placeholder = 'Adicione suas observações...';
-                observationsInput.onchange = (e) => {
-                    challengeData[index].observations = e.target.value;
-                };
+                observationsInput.onchange = (e) => { challengeData[index].observations = e.target.value; saveToLocalStorage(); };
                 observationsCell.appendChild(observationsInput);
 
-                // Progresso (barra em cima, porcentagem embaixo)
                 const progressCell = row.insertCell(4);
                 progressCell.className = 'progress-cell';
-                const progressPercent = dayData.progress || 0;
                 const progressBar = document.createElement('div');
                 progressBar.className = 'progress-bar';
                 const progressFill = document.createElement('div');
                 progressFill.className = 'progress-fill';
-                progressFill.style.width = `${progressPercent}%`;
+                progressFill.style.width = `${dayData.progress}%`;
                 progressBar.appendChild(progressFill);
                 const percentDiv = document.createElement('div');
                 percentDiv.className = 'progress-percent';
-                percentDiv.textContent = `${progressPercent}%`;
+                percentDiv.textContent = `${dayData.progress}%`;
                 progressCell.appendChild(progressBar);
                 progressCell.appendChild(percentDiv);
             });
@@ -261,105 +222,37 @@
 
         function updateProgress(dayIndex) {
             const dayData = challengeData[dayIndex];
-            let completed = 0;
-            if (dayData.exercise) completed += 50;
-            if (dayData.sugarFree) completed += 50;
-            dayData.progress = completed;
+            dayData.progress = (dayData.exercise ? 50 : 0) + (dayData.sugarFree ? 50 : 0);
         }
 
         function updateStats() {
-            const completedDays = challengeData.filter(day => day.progress === 100).length;
-            const exerciseCount = challengeData.filter(day => day.exercise).length;
-            const sugarFreeCount = challengeData.filter(day => day.sugarFree).length;
-
-            document.getElementById('completedDays').textContent = completedDays;
-            document.getElementById('exerciseCount').textContent = exerciseCount;
-            document.getElementById('sugarFreeCount').textContent = sugarFreeCount;
+            document.getElementById('completedDays').textContent = challengeData.filter(d => d.progress === 100).length;
+            document.getElementById('exerciseCount').textContent = challengeData.filter(d => d.exercise).length;
+            document.getElementById('sugarFreeCount').textContent = challengeData.filter(d => d.sugarFree).length;
         }
 
         function updateChart() {
-            const completedDays = challengeData.filter(day => day.progress === 100).length;
-            const partialDays = challengeData.filter(day => day.progress > 0 && day.progress < 100).length;
+            const completedDays = challengeData.filter(d => d.progress === 100).length;
+            const partialDays = challengeData.filter(d => d.progress > 0 && d.progress < 100).length;
             const pendingDays = 21 - completedDays - partialDays;
-
             const ctx = document.getElementById('progressChart').getContext('2d');
-
-            if (chart) { chart.destroy(); }
-
-            chart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Dias Completos', 'Dias Parciais', 'Dias Pendentes'],
-                    datasets: [{
-                        data: [completedDays, partialDays, pendingDays],
-                        backgroundColor: [
-                            'rgba(59, 130, 246, 0.8)',
-                            'rgba(139, 92, 246, 0.8)',
-                            'rgba(148, 163, 184, 0.3)'
-                        ],
-                        borderColor: [
-                            'rgba(59, 130, 246, 1)',
-                            'rgba(139, 92, 246, 1)',
-                            'rgba(148, 163, 184, 0.5)'
-                        ],
-                        borderWidth: 2,
-                        cutout: '65%'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 24,
-                                usePointStyle: true,
-                                font: { size:13, weight:'500' },
-                                color: '#f8fafc'
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.label}: ${context.parsed} dias`;
-                                }
-                            },
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            titleColor: '#f8fafc',
-                            bodyColor: '#f8fafc',
-                            borderColor: 'rgba(59, 130, 246, 0.5)',
-                            borderWidth: 1
-                        }
-                    }
-                }
-            });
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, { type:'doughnut', data:{ labels:['Dias Completos','Dias Parciais','Dias Pendentes'], datasets:[{ data:[completedDays,partialDays,pendingDays], backgroundColor:['rgba(59,130,246,0.8)','rgba(139,92,246,0.8)','rgba(148,163,184,0.3)'], borderColor:['rgba(59,130,246,1)','rgba(139,92,246,1)','rgba(148,163,184,0.5)'], borderWidth:2, cutout:'65%' }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ padding:24, usePointStyle:true, font:{ size:13, weight:'500' }, color:'#f8fafc' } } } } });
         }
 
         function updateMotivationalMessage() {
-            const completedDays = challengeData.filter(day => day.progress === 100).length;
+            const completedDays = challengeData.filter(d => d.progress === 100).length;
             const totalProgress = (completedDays / 21) * 100;
-
-            let message = '';
-
-            if (totalProgress === 0) {
-                message = '🌟 Você está no começo de uma jornada incrível! Cada dia é uma vitória! 🌟';
-            } else if (totalProgress <= 25) {
-                message = '🌊 Ótimo começo! Você já está construindo hábitos saudáveis! 🌊';
-            } else if (totalProgress <= 50) {
-                message = '💎 Você está no meio do caminho! Continue assim, você consegue! 💎';
-            } else if (totalProgress <= 75) {
-                message = '⚡ Incrível! Você está quase lá! Mantenha o foco! ⚡';
-            } else if (totalProgress < 100) {
-                message = '🚀 Você está quase no topo! A linha de chegada está próxima! 🚀';
-            } else {
-                message = '🏆 PARABÉNS! Você completou o desafio de 21 dias! Você é incrível! 🏆';
-            }
-
+            let message = '🌟 Você está no começo de uma jornada incrível! Cada dia é uma vitória! 🌟';
+            if (totalProgress > 0 && totalProgress <= 25) message = '🌊 Ótimo começo! Você já está construindo hábitos saudáveis! 🌊';
+            else if (totalProgress <= 50) message = '💎 Você está no meio do caminho! Continue assim, você consegue! 💎';
+            else if (totalProgress <= 75) message = '⚡ Incrível! Você está quase lá! Mantenha o foco! ⚡';
+            else if (totalProgress < 100) message = '🚀 Você está quase no topo! A linha de chegada está próxima! 🚀';
+            else if (totalProgress === 100) message = '🏆 PARABÉNS! Você completou o desafio de 21 dias! Você é incrível! 🏆';
             document.getElementById('motivationalMessage').textContent = message;
         }
 
-        // Inicializa
+        loadFromLocalStorage();
         createTable();
         updateStats();
         updateChart();
